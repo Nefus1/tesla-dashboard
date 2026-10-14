@@ -143,3 +143,7 @@ npm run check   # syntax-check all JS
 ```
 
 See [CLAUDE.md](CLAUDE.md) for the architecture.
+
+## License
+
+[GPL-3.0](LICENSE). Not affiliated with Tesla, Inc.
