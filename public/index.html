@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#070809">
+  <meta name="description" content="Tesla vehicle dashboard for Home Assistant">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Model Y Dashboard</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#view">Skip to content</a>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 100 130" fill="currentColor">
+            <path d="M0 20Q0 0 20 0h60Q100 0 100 20v10Q70 38 50 38Q30 38 0 30Z"/>
+            <rect x="44" y="38" width="12" height="92" rx="2"/>
+          </svg>
+        </span>
+        <div>
+          <h1 data-bind="vehicleName">Model Y</h1>
+          <p data-bind="locationLine">Connecting…</p>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+        <a class="tab" role="tab" href="#/home" data-view="home" aria-controls="view">Home</a>
+        <a class="tab" role="tab" href="#/garage" data-view="garage" aria-controls="view">Garage</a>
+        <a class="tab" role="tab" href="#/charging" data-view="charging" aria-controls="view">Charging</a>
+        <a class="tab" role="tab" href="#/climate" data-view="climate" aria-controls="view">Climate</a>
+        <a class="tab" role="tab" href="#/energy" data-view="energy" aria-controls="view">Energy</a>
+        <a class="tab" role="tab" href="#/trip" data-view="trip" aria-controls="view">Trip</a>
+      </nav>
+
+      <div class="top-actions">
+        <span class="last-updated" id="lastUpdated"></span>
+        <span class="live-dot is-offline" id="connectionPill" role="status">Connecting…</span>
+        <div class="alerts-wrap">
+          <button class="icon-button" id="alertsButton" type="button" aria-label="Alerts" aria-haspopup="true" aria-expanded="false" aria-controls="alertsPanel">
+            <span data-icon="bell"></span>
+            <span class="badge-count" id="alertsBadge" hidden>0</span>
+          </button>
+          <div class="alerts-panel" id="alertsPanel" hidden>
+            <p class="eyebrow">Alerts</p>
+            <ul class="alerts-list" id="alertsList"></ul>
+          </div>
+        </div>
+        <button class="icon-button" id="refreshButton" type="button" aria-label="Refresh vehicle data" title="Refresh (R)">
+          <span data-icon="refresh"></span>
+        </button>
+      </div>
+    </header>
+
+    <section class="status-strip" aria-label="Vehicle summary">
+      <article class="stat-card primary">
+        <span class="stat-label">Battery</span>
+        <strong><span data-bind="stripBattery">—</span><small>%</small></strong>
+        <div class="battery-track" aria-hidden="true"><span id="batteryFill"></span></div>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Range</span>
+        <strong><span data-bind="stripRange">—</span><small data-bind="stripRangeUnit">mi</small></strong>
+        <span class="stat-sub" data-bind="stripRangeSub"></span>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Charging</span>
+        <strong data-bind="stripCharge">—</strong>
+        <span class="stat-sub" data-bind="stripChargeSub"></span>
+      </article>
+      <article class="stat-card" id="statReady">
+        <span class="stat-label">Ready</span>
+        <strong data-bind="stripReady">—</strong>
+        <span class="stat-sub" data-bind="stripReadySub"></span>
+      </article>
+    </section>
+
+    <div class="setup-banner" id="setupBanner" role="status" hidden>
+      <span data-icon="alert"></span>
+      <span><b id="setupTitle"></b> <span id="setupBody"></span></span>
+      <a class="link-button" href="#/garage">Details</a>
+    </div>
+
+    <main id="view" tabindex="-1" aria-busy="true">
+      <div class="skeleton-grid" aria-hidden="true">
+        <div class="panel skeleton"></div>
+        <div class="panel skeleton tall"></div>
+        <div class="panel skeleton"></div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <span>Shortcuts: <kbd>H</kbd> <kbd>G</kbd> <kbd>C</kbd> <kbd>M</kbd> <kbd>N</kbd> <kbd>T</kbd> views · <kbd>L</kbd> lock · <kbd>S</kbd> sentry · <kbd>R</kbd> refresh</span>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle">
+    <form method="dialog">
+      <h2 id="confirmTitle">Are you sure?</h2>
+      <p id="confirmBody"></p>
+      <div class="confirm-actions">
+        <button class="command-button secondary" value="cancel" type="submit">Cancel</button>
+        <button class="command-button" id="confirmOk" value="confirm" type="submit">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="carFallbackTemplate">
+    <svg class="car-svg" viewBox="0 0 210 430" role="img" aria-label="Top-down vehicle illustration">
+      <defs>
+        <linearGradient id="bodyGradient" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#42474d"></stop>
+          <stop offset="0.5" stop-color="#b7bdc4"></stop>
+          <stop offset="1" stop-color="#3b4046"></stop>
+        </linearGradient>
+        <linearGradient id="glassGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#07101a"></stop>
+          <stop offset="0.45" stop-color="#26313e"></stop>
+          <stop offset="1" stop-color="#070b10"></stop>
+        </linearGradient>
+      </defs>
+      <ellipse cx="105" cy="415" rx="82" ry="8" fill="rgba(0,0,0,.52)"></ellipse>
+      <path d="M36 42C36 18 60 6 105 6s69 12 69 36c5 70 6 253-2 333-3 31-29 45-67 45s-64-14-67-45c-8-80-7-263-2-333Z" fill="url(#bodyGradient)" stroke="rgba(0,0,0,.58)"></path>
+      <path d="M56 96C52 115 51 140 51 174v112c0 34 3 59 9 77h90c6-18 9-43 9-77V174c0-34-1-59-5-78Z" fill="url(#glassGradient)"></path>
+      <path d="M61 82c16-8 72-8 88 0 5 16 7 31 8 50H53c1-19 3-34 8-50Z" fill="rgba(8,15,24,.76)"></path>
+      <path d="M58 345c16 12 78 12 94 0-1 17-4 28-9 37H67c-5-9-8-20-9-37Z" fill="rgba(8,15,24,.72)"></path>
+      <rect x="45" y="38" width="120" height="5" rx="2.5" fill="rgba(236,250,255,.92)"></rect>
+      <path d="M55 57c10-7 21-10 34-10M155 57c-10-7-21-10-34-10" fill="none" stroke="rgba(255,247,220,.72)" stroke-width="7" stroke-linecap="round"></path>
+      <ellipse cx="35" cy="138" rx="7" ry="13" fill="#687078"></ellipse>
+      <ellipse cx="175" cy="138" rx="7" ry="13" fill="#687078"></ellipse>
+      <rect x="50" y="389" width="110" height="6" rx="3" fill="rgba(229,48,54,.9)"></rect>
+      <circle class="charge-port" cx="39" cy="357" r="4"></circle>
+    </svg>
+  </template>
+</body>
+</html>
